@@ -2,7 +2,7 @@ import type { Session } from "@/types/auth";
 
 export async function getSession(): Promise<Session | null> {
   try {
-    const res = await fetch("http://localhost:3000/api/auth/get-session", {
+    const res = await fetch("http://localhost:8080/api/auth/get-session", {
       credentials: "include",
     });
 
@@ -27,12 +27,12 @@ export async function getSession(): Promise<Session | null> {
 }
 
 export async function signOut(): Promise<void> {
-  await fetch("http://localhost:3000/auth/logout", {
+  await fetch("http://localhost:8080/auth/logout", {
     method: "POST",
     credentials: "include",
   });
 }
 
 export function getLoginUrl(callbackURL: string = "/"): string {
-  return `http://localhost:3000/auth/start?callbackURL=${encodeURIComponent(callbackURL)}`;
+  return `http://localhost:8080/auth/start?callbackURL=${encodeURIComponent(callbackURL)}`;
 }

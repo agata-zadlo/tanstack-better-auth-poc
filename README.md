@@ -13,9 +13,9 @@ A proof-of-concept application demonstrating OAuth PKCE authentication with Okta
 ## Architecture
 
 The application uses a dual-server architecture with Express as the main entry point:
-- **Express Server** (port 3000): Handles Better Auth endpoints and proxies all other requests to Vite
+- **Express Server** (port 8080): Handles Better Auth endpoints and proxies all other requests to Vite
 - **Vite Dev Server** (port 5173): Runs in the background for HMR and asset serving
-- **Access**: Everything is accessed through http://localhost:3000
+- **Access**: Everything is accessed through http://localhost:8080
 
 ## Prerequisites
 
@@ -35,14 +35,14 @@ The application uses a dual-server architecture with Express as the main entry p
    
    ```env
    BETTER_AUTH_SECRET=your-secret-here
-   BETTER_AUTH_URL=http://localhost:3000
+   BETTER_AUTH_URL=http://localhost:8080
    OKTA_ISSUER=https://your-okta-domain/oauth2/default
    OKTA_CLIENT_ID=your-client-id
    OKTA_CLIENT_SECRET=your-client-secret
    ```
 
    **Important**: The Okta application must have the following redirect URI configured:
-   - `http://localhost:3000/api/auth/callback/okta`
+   - `http://localhost:8080/api/auth/callback/okta`
 
 ## Development
 
@@ -53,10 +53,10 @@ npm run dev
 ```
 
 This will start:
-- Express server on http://localhost:3000 (main entry point)
+- Express server on http://localhost:8080 (main entry point)
 - Vite dev server on http://localhost:5173 (background for HMR)
 
-Open http://localhost:3000 in your browser. You'll be redirected to the login page.
+Open http://localhost:8080 in your browser. You'll be redirected to the login page.
 
 ## Project Structure
 
@@ -123,7 +123,7 @@ Open http://localhost:3000 in your browser. You'll be redirected to the login pa
 
 After starting the dev servers:
 
-1. Navigate to http://localhost:3000
+1. Navigate to http://localhost:8080
 2. You should be redirected to `/login`
 3. Click "Login with Okta"
 4. Authenticate with your Okta credentials

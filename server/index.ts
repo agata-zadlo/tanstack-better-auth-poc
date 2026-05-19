@@ -6,14 +6,14 @@ import { auth } from "./auth";
 config({ path: ".env.local" });
 
 const app = express();
-const PORT = 3000;
+const PORT = 8080;
 const VITE_PORT = 5173;
 
 app.use(express.json());
 
 app.all("/api/auth/*", async (req, res) => {
   return auth.handler(
-    new Request(`http://localhost:3000${req.url}`, {
+    new Request(`http://localhost:8080${req.url}`, {
       method: req.method,
       headers: req.headers as HeadersInit,
       body: req.method !== "GET" && req.method !== "HEAD" ? JSON.stringify(req.body) : undefined,
@@ -42,6 +42,13 @@ app.all("/api/auth/*", async (req, res) => {
 
 app.get("/auth/start", async (req, res) => {
   try {
+    console.log("=== Auth Start Debug ===");
+    console.log("OKTA_ISSUER:", process.env.OKTA_ISSUER);
+    console.log("OKTA_CLIENT_ID:", process.env.OKTA_CLIENT_ID);
+    console.log("BETTER_AUTH_URL:", process.env.BETTER_AUTH_URL);
+    console.log("Callback URL:", (req.query.callbackURL as string) || "/");
+    console.log("Expected redirect_uri:", `${process.env.BETTER_AUTH_URL}/api/auth/callback/okta`);
+
     const callbackURL = (req.query.callbackURL as string) || "/";
 
     const result = await auth.api.signInWithOAuth2({
@@ -64,6 +71,14 @@ app.get("/auth/start", async (req, res) => {
     }
 
     if (result.response?.url) {
+      console.log("OAuth redirect URL:", result.response.url);
+      // Parse the URL to extract redirect_uri parameter
+      try {
+        const redirectUrl = new URL(result.response.url);
+        console.log("redirect_uri parameter:", redirectUrl.searchParams.get("redirect_uri"));
+      } catch (e) {
+        console.log("Could not parse redirect URL");
+      }
       res.redirect(result.response.url);
     } else {
       res.status(500).json({ error: "No redirect URL received" });
