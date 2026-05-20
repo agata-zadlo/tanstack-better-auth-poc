@@ -74,17 +74,16 @@ export const auth = betterAuth({
             };
           },
 
-          // getUserInfo lets us intercept the full token set so we can
-          // decode the access token and pull groups into the profile data.
-          // The generic OAuth plugin merges this object into the final user.
+          // Extract groups from ID token
           getUserInfo: async (tokens) => {
             const issuer = process.env.OKTA_ISSUER!;
             const userInfoUrl = `${issuer}/oauth2/v1/userinfo`;
 
-            console.log("=== Token Debug ===");
-            console.log("Access Token:", tokens.accessToken);
-            console.log("ID Token:", tokens.idToken);
+            console.log("\n=== Token Debug ===");
+            console.log("RAW ID Token:", tokens.idToken);
+            console.log("RAW Access Token:", tokens.accessToken);
 
+            // Get user profile from userinfo endpoint
             const res = await fetch(userInfoUrl, {
               headers: { Authorization: `Bearer ${tokens.accessToken}` },
             });
@@ -96,60 +95,26 @@ export const auth = betterAuth({
             }
 
             const profile = (await res.json()) as Record<string, unknown>;
-            console.log("Userinfo profile:", JSON.stringify(profile, null, 2));
 
+            // Extract groups from ID token
             let groups: string[] = [];
-
-            // Check userinfo response first
-            if (Array.isArray(profile.groups)) {
-              groups = profile.groups as string[];
-            }
-
-            // Check ID token (org authorization server puts groups here)
-            if (groups.length === 0 && tokens.idToken) {
+            if (tokens.idToken) {
               const idTokenPayload = decodeJwtPayload(tokens.idToken);
-              console.log("Decoded ID token payload:", JSON.stringify(idTokenPayload, null, 2));
+              console.log("ID Token payload:", JSON.stringify(idTokenPayload, null, 2));
+
               if (Array.isArray(idTokenPayload.groups)) {
                 groups = idTokenPayload.groups as string[];
+                console.log("✓ Found groups in ID token:", groups);
               }
             }
 
-            // Check access token (custom authorization server would put groups here)
-            if (groups.length === 0 && tokens.accessToken) {
+            // Also decode and print access token
+            if (tokens.accessToken) {
               const accessTokenPayload = decodeJwtPayload(tokens.accessToken);
-              console.log("Decoded access token payload:", JSON.stringify(accessTokenPayload, null, 2));
-              if (Array.isArray(accessTokenPayload.groups)) {
-                groups = accessTokenPayload.groups as string[];
-              }
+              console.log("Access Token payload:", JSON.stringify(accessTokenPayload, null, 2));
             }
 
-            // Fallback: Fetch groups from Okta API if not in token
-            if (groups.length === 0 && profile.sub && process.env.OKTA_API_TOKEN) {
-              try {
-                const userId = String(profile.sub);
-                const groupsUrl = `${issuer}/api/v1/users/${userId}/groups`;
-                console.log("Fetching groups from API:", groupsUrl);
-
-                const groupsRes = await fetch(groupsUrl, {
-                  headers: {
-                    Authorization: `SSWS ${process.env.OKTA_API_TOKEN}`,
-                    Accept: "application/json",
-                  },
-                });
-
-                if (groupsRes.ok) {
-                  const groupsData = await groupsRes.json() as Array<{ id: string; profile: { name: string } }>;
-                  groups = groupsData.map(g => g.profile.name);
-                  console.log("Groups from API:", groups);
-                } else {
-                  console.log("Could not fetch groups from API:", groupsRes.status, groupsRes.statusText);
-                }
-              } catch (e) {
-                console.log("Error fetching groups from API:", e);
-              }
-            }
-
-            console.log("Final extracted groups:", groups);
+            console.log("===================\n");
 
             return {
               id: String(profile.sub ?? ""),
