@@ -1,140 +1,406 @@
-# TanStack Router + Better Auth + Okta POC
+# TanStack Router + react-oidc-context + Okta POC
 
-A proof-of-concept application demonstrating OAuth PKCE authentication with Okta using Better Auth, TanStack Router for routing, TanStack Query for data fetching, and Ant Design for UI components.
+A proof-of-concept demonstrating OpenID Connect (OIDC) authentication with Okta using TanStack Router and react-oidc-context.
 
-## Features
+## Overview
 
-- **Authentication**: Okta OAuth PKCE flow with Better Auth (stateless, cookie-based sessions)
-- **Routing**: TanStack Router with file-based routing and authentication guards
-- **Data Fetching**: TanStack Query for efficient API data management
-- **UI**: Ant Design components with responsive sidebar navigation
-- **Protected Routes**: All application pages require authentication
+This POC demonstrates:
+- ✅ Client-side OIDC authentication using `react-oidc-context`
+- ✅ TanStack Router with protected routes
+- ✅ Okta as the identity provider
+- ✅ Authorization Code Flow with PKCE
+- ✅ Group claims from Okta displayed in the UI
+- ✅ Silent token renewal
+- ✅ Logout with redirect
 
 ## Architecture
 
-The application uses a dual-server architecture with Express as the main entry point:
-- **Express Server** (port 8080): Handles Better Auth endpoints and proxies all other requests to Vite
-- **Vite Dev Server** (port 5173): Runs in the background for HMR and asset serving
-- **Access**: Everything is accessed through http://localhost:8080
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         Browser                             │
+│                                                             │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │           React App (Port 5173)                    │   │
+│  │                                                     │   │
+│  │  • TanStack Router (routing)                       │   │
+│  │  • react-oidc-context (auth)                       │   │
+│  │  • oidc-client-ts (OIDC protocol)                  │   │
+│  │                                                     │   │
+│  │  Protected Routes: /products, /users               │   │
+│  │  Public Routes: /login, /callback                  │   │
+│  └──────────────┬──────────────────┬──────────────────┘   │
+│                 │                  │                        │
+└─────────────────┼──────────────────┼────────────────────────┘
+                  │                  │
+                  │                  │ API Calls
+      OIDC Flow  │                  │
+   (Direct to    │                  │
+     Okta)       │                  ▼
+                  │         ┌─────────────────┐
+                  │         │   API Server    │
+                  │         │  (Port 8081)    │
+                  │         │                 │
+                  │         │  • GET /users   │
+                  │         │  • GET /products│
+                  │         └─────────────────┘
+                  │
+                  ▼
+         ┌────────────────┐
+         │      Okta      │
+         │                │
+         │  • Handles     │
+         │    login       │
+         │  • Issues      │
+         │    tokens      │
+         │  • Groups      │
+         │    claims      │
+         └────────────────┘
+```
 
-## Prerequisites
+## Tech Stack
+
+### Frontend (Port 5173)
+- **React 19** - UI library
+- **TanStack Router** - Type-safe routing
+- **react-oidc-context** - OIDC authentication provider
+- **oidc-client-ts** - OIDC protocol implementation
+- **Ant Design** - UI components
+- **Vite** - Build tool
+
+### Backend (Port 8081)
+- **Express** - Minimal API server
+- **CORS** - Cross-origin support
+
+Simple mock API server providing user and product data.
+
+## Project Structure
+
+```
+├── src/
+│   ├── components/
+│   │   ├── AppLayout.tsx         # Main layout with header, sidebar, logout
+│   │   ├── ProductsTable.tsx     # Products listing
+│   │   └── UsersTable.tsx        # Users listing
+│   ├── lib/
+│   │   ├── api.ts                # API client functions
+│   │   ├── auth-client.ts        # (deprecated - kept for compatibility)
+│   │   ├── menu-config.tsx       # Sidebar menu configuration
+│   │   ├── oidc-config.ts        # OIDC configuration for Okta
+│   │   └── query-client.ts       # TanStack Query client
+│   ├── routes/
+│   │   ├── __root.tsx            # Root route
+│   │   ├── _authenticated.tsx    # Protected route wrapper
+│   │   ├── _authenticated/
+│   │   │   ├── products.tsx      # Products page (protected)
+│   │   │   └── users.tsx         # Users page (protected)
+│   │   ├── callback.tsx          # OIDC callback handler
+│   │   ├── index.tsx             # Root redirect
+│   │   └── login.tsx             # Login page
+│   ├── types/
+│   │   └── auth.ts               # Auth-related types
+│   ├── main.tsx                  # App entry point with AuthProvider
+│   └── index.css                 # Global styles
+├── server/
+│   └── index.ts                  # Express API server
+├── .env.local                    # Environment variables
+├── OKTA_CONFIGURATION.md         # Detailed Okta setup guide
+├── package.json
+└── README.md
+```
+
+## Getting Started
+
+### Prerequisites
 
 - Node.js 18+ and npm
-- Okta account with a configured OAuth application
+- Okta account with an application configured
+- See [OKTA_CONFIGURATION.md](./OKTA_CONFIGURATION.md) for detailed Okta setup
 
-## Setup
+### Installation
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+1. **Clone and install dependencies:**
+
+```bash
+npm install
+```
 
 2. **Configure environment variables:**
-   
-   The `.env.local` file is already configured with Okta credentials from the reference project. If you need to change them:
-   
-   ```env
-   BETTER_AUTH_SECRET=your-secret-here
-   BETTER_AUTH_URL=http://localhost:8080
-   OKTA_ISSUER=https://your-okta-domain/oauth2/default
-   OKTA_CLIENT_ID=your-client-id
-   OKTA_CLIENT_SECRET=your-client-secret
-   ```
 
-   **Important**: The Okta application must have the following redirect URI configured:
-   - `http://localhost:8080/api/auth/callback/okta`
+Create a `.env.local` file in the root:
 
-## Development
+```bash
+# Okta OIDC Configuration
+VITE_OKTA_ISSUER=https://your-domain.okta.com/oauth2/default
+VITE_OKTA_CLIENT_ID=your-client-id-here
+VITE_REDIRECT_URI=http://localhost:5173/callback
+VITE_POST_LOGOUT_REDIRECT_URI=http://localhost:5173
+```
 
-Start both the Express API server and Vite dev server:
+Replace with your actual Okta values.
+
+3. **Configure Okta Application:**
+
+Follow the comprehensive guide in [OKTA_CONFIGURATION.md](./OKTA_CONFIGURATION.md)
+
+Key requirements:
+- Application type: Web Application (OIDC)
+- Grant type: Authorization Code with PKCE
+- Sign-in redirect URI: `http://localhost:5173/callback`
+- Trusted Origins: `http://localhost:5173` (CORS + Redirect)
+- Groups claim configured in ID token
+
+### Running the Application
+
+Start both the API server and the Vite dev server:
 
 ```bash
 npm run dev
 ```
 
-This will start:
-- Express server on http://localhost:8080 (main entry point)
-- Vite dev server on http://localhost:5173 (background for HMR)
+This runs:
+- **API Server**: http://localhost:8081
+- **React App**: http://localhost:5173
 
-Open http://localhost:8080 in your browser. You'll be redirected to the login page.
+Or run them separately:
 
-## Project Structure
+```bash
+# Terminal 1 - API Server
+npm run dev:api
 
+# Terminal 2 - React App
+npm run dev:client
 ```
-├── server/                    # Express API server
-│   ├── index.ts              # Express server with auth routes
-│   ├── auth.ts               # Better Auth configuration
-│   └── utils.ts              # JWT decoding utilities
-├── src/
-│   ├── routes/               # TanStack Router file-based routes
-│   │   ├── __root.tsx        # Root layout
-│   │   ├── index.tsx         # Home (redirects to /products)
-│   │   ├── login.tsx         # Login page
-│   │   ├── _authenticated.tsx           # Auth guard layout
-│   │   └── _authenticated/
-│   │       ├── products.tsx  # Products table page
-│   │       └── users.tsx     # Users table page
-│   ├── components/           # React components
-│   │   ├── AppLayout.tsx     # Main layout with sidebar
-│   │   ├── ProductsTable.tsx # Products table
-│   │   └── UsersTable.tsx    # Users table
-│   ├── lib/                  # Utilities and clients
-│   │   ├── auth-client.ts    # Auth API client
-│   │   ├── query-client.ts   # TanStack Query config
-│   │   └── api.ts            # Data fetching functions
-│   └── types/
-│       └── auth.ts           # TypeScript types
-└── .env.local                # Environment variables
-```
+
+### Using the Application
+
+1. Navigate to http://localhost:5173
+2. You'll be redirected to `/login`
+3. Click "Login with Okta"
+4. Authenticate with your Okta credentials
+5. After successful login, you'll be redirected to `/products`
+6. Your user info and groups will appear in the header
+7. Navigate between Products and Users using the sidebar
 
 ## Authentication Flow
 
-1. User navigates to a protected route (e.g., `/products`)
-2. TanStack Router's `beforeLoad` hook checks for a session
-3. If no session exists, user is redirected to `/login` with a callback URL
-4. User clicks "Login with Okta"
-5. Browser redirects to `/auth/start`, which initiates the OAuth flow
-6. Better Auth generates PKCE parameters and redirects to Okta
-7. User authenticates with Okta
-8. Okta redirects back to `/api/auth/callback/okta`
-9. Better Auth exchanges the authorization code for tokens
-10. Better Auth creates an encrypted session cookie
-11. User is redirected to the original requested page
+### Login Flow
 
-## Key Technical Details
+```
+1. User clicks "Login with Okta"
+   └─> auth.signinRedirect() is called
 
-- **Stateless Sessions**: Better Auth uses encrypted JWE cookies (no database required)
-- **PKCE Flow**: Automatically handled by Better Auth for enhanced security
-- **Route Guards**: TanStack Router's `beforeLoad` hook provides authentication protection
-- **Cookie Sharing**: Vite proxy forwards cookies between the two servers during development
-- **Data Sources**: 
-  - Products: https://api.fake-rest.refine.dev/products
-  - Users: https://api.fake-rest.refine.dev/users
+2. Browser redirects to Okta authorization endpoint
+   └─> Includes: client_id, redirect_uri, scope, code_challenge (PKCE)
 
-## Available Scripts
+3. User authenticates with Okta
+   └─> Enters credentials, MFA if required
 
-- `npm run dev` - Start both servers concurrently
-- `npm run dev:api` - Start only the Express API server
-- `npm run dev:vite` - Start only the Vite dev server
-- `npm run build` - Build the application for production
-- `npm run lint` - Run ESLint
+4. Okta redirects to callback URI with authorization code
+   └─> http://localhost:5173/callback?code=...&state=...
 
-## Testing the Application
+5. react-oidc-context automatically exchanges code for tokens
+   └─> POST to Okta token endpoint with code_verifier (PKCE)
 
-After starting the dev servers:
+6. Tokens received and user state updated
+   └─> ID token, access token, refresh token (if configured)
 
-1. Navigate to http://localhost:8080
-2. You should be redirected to `/login`
-3. Click "Login with Okta"
-4. Authenticate with your Okta credentials
-5. You should be redirected to `/products` with data displayed
-6. Click "Users" in the sidebar to view the users table
-7. Click "Logout" to clear your session
+7. Callback page redirects to /products
+   └─> User is now authenticated
+```
 
-## Production Deployment
+### Protected Routes
 
-For production, you would typically:
-1. Build the Vite application: `npm run build`
-2. Serve both the API and static files from a single Express server
-3. Update `BETTER_AUTH_URL` to your production domain
-4. Update Okta redirect URIs to match your production domain
+The `_authenticated.tsx` route wrapper:
+- Checks if user is authenticated via `useAuth()`
+- Shows loading spinner while checking
+- Redirects to `/login` if not authenticated
+- Renders protected content if authenticated
+
+### Token Management
+
+- **Automatic Renewal**: Tokens are automatically renewed before expiry
+- **Storage**: Tokens stored in browser sessionStorage
+- **Silent Renewal**: Uses hidden iframe to renew without interrupting user
+
+### Logout Flow
+
+```
+1. User clicks "Logout"
+   └─> auth.signoutRedirect() is called
+
+2. Local session cleared
+   └─> Tokens removed from storage
+
+3. Browser redirects to Okta logout endpoint
+   └─> Ends Okta session
+
+4. Okta redirects back to post_logout_redirect_uri
+   └─> http://localhost:5173
+```
+
+## Key Files Explained
+
+### `src/lib/oidc-config.ts`
+
+Configures the OIDC client:
+- Authority (Okta issuer URL)
+- Client ID
+- Redirect URIs
+- Scopes (openid, profile, email, groups)
+- Automatic silent renewal
+- Callback to clean up URL after login
+
+### `src/main.tsx`
+
+Wraps the app with `AuthProvider`:
+```tsx
+<AuthProvider {...oidcConfig}>
+  <RouterProvider router={router} />
+</AuthProvider>
+```
+
+### `src/routes/_authenticated.tsx`
+
+Protected route wrapper that:
+- Uses `useAuth()` hook to check authentication status
+- Handles loading state
+- Redirects to login if needed
+- Passes user session to child routes
+
+### `src/routes/callback.tsx`
+
+Handles the OAuth callback:
+- Receives authorization code from Okta
+- `react-oidc-context` automatically processes it
+- Redirects to `/products` after completion
+
+## API Integration
+
+The API server is simple and separate:
+- No authentication middleware needed
+- CORS enabled for http://localhost:5173
+- Provides mock data for users and products
+
+In production, you would:
+- Add authentication middleware to verify access tokens
+- Check user groups/roles for authorization
+- Use real database instead of mock data
+
+Example secured endpoint (not implemented in this POC):
+
+```typescript
+app.get("/api/users", verifyAccessToken, (req, res) => {
+  // Verify token, check groups, return data
+});
+```
+
+## Accessing User Information
+
+Use the `useAuth()` hook from `react-oidc-context`:
+
+```tsx
+import { useAuth } from "react-oidc-context";
+
+function MyComponent() {
+  const auth = useAuth();
+
+  if (auth.isAuthenticated) {
+    console.log(auth.user?.profile.name);
+    console.log(auth.user?.profile.email);
+    console.log(auth.user?.profile.groups); // Okta groups
+  }
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**1. Redirect URI Mismatch**
+```
+Error: redirect_uri_mismatch
+```
+- Verify redirect URI in Okta matches `.env.local` exactly
+- Check for trailing slashes (should not have one)
+
+**2. CORS Errors**
+```
+Access to fetch at 'https://your-domain.okta.com/...' has been blocked by CORS
+```
+- Add http://localhost:5173 to Trusted Origins in Okta
+- Enable both CORS and Redirect options
+
+**3. Groups Not Showing**
+- Verify groups claim is configured in authorization server
+- Check "Include in token type" is set to "ID Token, Always"
+- Inspect `auth.user.profile` in browser console
+
+**4. Token Expired**
+- Tokens automatically refresh if `automaticSilentRenew` is enabled
+- Clear browser storage and log in again
+
+**5. User Not Assigned**
+- Go to Okta Application → Assignments
+- Assign the user or their group
+
+### Debug Mode
+
+Enable OIDC client logs:
+
+```typescript
+// In src/lib/oidc-config.ts
+export const oidcConfig: AuthProviderProps = {
+  // ... other config
+  onSigninCallback: () => {
+    console.log("Sign-in callback");
+    window.history.replaceState({}, document.title, window.location.pathname);
+  },
+  // Add this for debugging
+  monitorSession: true,
+};
+```
+
+Check browser console for detailed OIDC logs.
+
+## Comparison with Better Auth
+
+| Feature | Better Auth | react-oidc-context |
+|---------|-------------|-------------------|
+| **Architecture** | Backend + Frontend | Frontend only |
+| **Session Storage** | Server-side (cookies) | Client-side (sessionStorage) |
+| **Backend Required** | Yes (Express middleware) | No (API only) |
+| **Client Type** | Confidential | Public (PKCE) |
+| **Complexity** | Higher | Lower |
+| **Token Management** | Server-side | Client-side |
+| **Scaling** | Requires session store | Stateless |
+
+## Production Considerations
+
+### Security
+- ✅ Use HTTPS for all URLs
+- ✅ Configure proper token lifetimes in Okta
+- ✅ Enable MFA for users
+- ✅ Review and restrict groups claim if needed
+- ✅ Implement proper API authentication (verify tokens)
+
+### Performance
+- ✅ Enable token caching
+- ✅ Configure appropriate token lifetimes
+- ✅ Use silent renewal to avoid interruptions
+
+### Monitoring
+- ✅ Monitor authentication failures in Okta
+- ✅ Track token renewal failures
+- ✅ Log OIDC errors in production
+
+## Further Reading
+
+- [OKTA_CONFIGURATION.md](./OKTA_CONFIGURATION.md) - Detailed Okta setup
+- [react-oidc-context docs](https://github.com/authts/react-oidc-context)
+- [oidc-client-ts docs](https://authts.github.io/oidc-client-ts/)
+- [OAuth 2.0 for Browser-Based Apps](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-browser-based-apps)
+- [TanStack Router docs](https://tanstack.com/router)
+
+## License
+
+MIT

@@ -1,27 +1,38 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { getSession } from "@/lib/auth-client";
+import { useAuth } from "react-oidc-context";
 import { AppLayout } from "@/components/AppLayout";
+import { Spin } from "antd";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async ({ location }) => {
-    const session = await getSession();
-
-    if (!session) {
-      throw redirect({
-        to: "/login",
-        search: {
-          callbackURL: location.href,
-        },
-      });
-    }
-
-    return { session };
-  },
   component: AuthenticatedLayout,
 });
 
 function AuthenticatedLayout() {
-  const { session } = Route.useRouteContext();
+  const auth = useAuth();
+
+  // Handle loading state
+  if (auth.isLoading) {
+    return (
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh"
+      }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!auth.isAuthenticated) {
+    window.location.href = "/login";
+    return null;
+  }
+
+  const session = {
+    user: auth.user!,
+  };
 
   return (
     <AppLayout session={session}>

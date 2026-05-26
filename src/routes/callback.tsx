@@ -1,26 +1,22 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Button, Card } from "antd";
 import { useAuth } from "react-oidc-context";
 import { useEffect } from "react";
+import { Spin } from "antd";
 
-export const Route = createFileRoute("/login")({
-  component: LoginPage,
+export const Route = createFileRoute("/callback")({
+  component: CallbackPage,
 });
 
-function LoginPage() {
+function CallbackPage() {
   const auth = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect to products if already authenticated
+    // After successful authentication, redirect to products
     if (auth.isAuthenticated) {
       navigate({ to: "/products" });
     }
   }, [auth.isAuthenticated, navigate]);
-
-  const handleLogin = () => {
-    auth.signinRedirect();
-  };
 
   return (
     <div
@@ -32,12 +28,7 @@ function LoginPage() {
         background: "#f0f2f5",
       }}
     >
-      <Card title="Login" style={{ width: 400 }}>
-        <p>Sign in with Okta to access the application.</p>
-        <Button type="primary" block onClick={handleLogin}>
-          Login with Okta
-        </Button>
-      </Card>
+      <Spin size="large" tip="Completing login..." />
     </div>
   );
 }

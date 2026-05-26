@@ -1,7 +1,7 @@
 import { Layout, Menu, Button } from "antd";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import { LogoutOutlined } from "@ant-design/icons";
-import { signOut } from "@/lib/auth-client";
+import { useAuth } from "react-oidc-context";
 import type { Session } from "@/types/auth";
 import { menuItems as menuConfig } from "@/lib/menu-config";
 
@@ -15,10 +15,10 @@ interface AppLayoutProps {
 export function AppLayout({ children, session }: AppLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const auth = useAuth();
 
   const handleLogout = async () => {
-    await signOut();
-    navigate({ to: "/login" });
+    await auth.signoutRedirect();
   };
 
   const menuItems = menuConfig
@@ -30,18 +30,12 @@ export function AppLayout({ children, session }: AppLayoutProps) {
       onClick: () => navigate({ to: item.path as any }),
     }));
 
-  // Parse groups from JSON string
-  let groups: string[] = [];
-  try {
-    if (session.user.groups) {
-      groups = JSON.parse(session.user.groups);
-    }
-  } catch {
-    // Invalid JSON, ignore
-  }
+  // Get groups from OIDC user profile
+  const groups = (session.user.profile.groups as string[] | undefined) || [];
+  const userName = session.user.profile.name || session.user.profile.email || "User";
 
   console.log("Session:", session);
-  console.log("User groups:", groups)
+  console.log("User groups:", groups);
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -75,7 +69,7 @@ export function AppLayout({ children, session }: AppLayoutProps) {
         >
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <div>
-              <strong>{session.user.name || session.user.email}</strong>
+              <strong>{userName}</strong>
               {groups.length > 0 && (
                 <div style={{ fontSize: "12px", color: "#666" }}>
                   Groups: {groups.join(", ")}

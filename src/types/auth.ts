@@ -1,8 +1,5 @@
+import { User } from "oidc-client-ts";
+
 export interface Session {
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    groups?: string;
-  };
+  user: User;
 }
