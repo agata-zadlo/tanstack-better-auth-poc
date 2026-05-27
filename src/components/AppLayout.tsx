@@ -34,6 +34,7 @@ export function AppLayout({ children, session }: AppLayoutProps) {
   const groups = (session.user.profile.groups as string[] | undefined) || [];
   const userName = session.user.profile.name || session.user.profile.email || "User";
 
+  console.log('whole auth', auth)
   console.log("Session:", session);
   console.log("User groups:", groups);
 
