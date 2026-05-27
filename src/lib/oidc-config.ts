@@ -1,5 +1,3 @@
-import { AuthProviderProps } from "oidc-client-ts";
-
 const authority = import.meta.env.VITE_OKTA_ISSUER;
 const client_id = import.meta.env.VITE_OKTA_CLIENT_ID;
 const redirect_uri = import.meta.env.VITE_REDIRECT_URI;
@@ -11,7 +9,7 @@ if (!authority || !client_id || !redirect_uri) {
   );
 }
 
-export const oidcConfig: AuthProviderProps = {
+export const oidcConfig = {
   authority,
   client_id,
   redirect_uri,
