@@ -99,15 +99,19 @@ npm run dev
 ```
 
 This starts:
-- **API Server**: http://localhost:8081
 - **React App**: http://localhost:5173
+
+That's it! No backend server needed.
 
 ## Step 6: Test It
 
 1. Open http://localhost:5173 in your browser
 2. Click **Login with Okta**
 3. Enter your Okta credentials
-4. You should see the products page with your name and groups in the header
+4. You should see your profile page with name and groups
+5. Explore:
+   - **Profile** - Your user information
+   - **Tokens** - OIDC token details
 
 ## Troubleshooting
 

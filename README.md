@@ -26,40 +26,36 @@ This POC demonstrates:
 │  │  • react-oidc-context (auth)                       │   │
 │  │  • oidc-client-ts (OIDC protocol)                  │   │
 │  │                                                     │   │
-│  │  Protected Routes: /products, /users               │   │
-│  │  Public Routes: /login, /callback                  │   │
-│  └──────────────┬──────────────────┬──────────────────┘   │
-│                 │                  │                        │
-└─────────────────┼──────────────────┼────────────────────────┘
-                  │                  │
-                  │                  │ API Calls
-      OIDC Flow  │                  │
-   (Direct to    │                  │
-     Okta)       │                  ▼
-                  │         ┌─────────────────┐
-                  │         │   API Server    │
-                  │         │  (Port 8081)    │
-                  │         │                 │
-                  │         │  • GET /users   │
-                  │         │  • GET /products│
-                  │         └─────────────────┘
-                  │
-                  ▼
-         ┌────────────────┐
-         │      Okta      │
-         │                │
-         │  • Handles     │
-         │    login       │
-         │  • Issues      │
-         │    tokens      │
-         │  • Groups      │
-         │    claims      │
-         └────────────────┘
+│  │  Pages:                                            │   │
+│  │  • /login - Login page                             │   │
+│  │  • /callback - OAuth callback                      │   │
+│  │  • /products - User profile (protected)            │   │
+│  │  • /users - Token details (protected)              │   │
+│  └──────────────────────┬─────────────────────────────┘   │
+│                         │                                   │
+└─────────────────────────┼───────────────────────────────────┘
+                          │
+              OIDC Flow   │
+           (Direct to     │
+             Okta)        │
+                          │
+                          ▼
+                 ┌────────────────┐
+                 │      Okta      │
+                 │                │
+                 │  • Handles     │
+                 │    login       │
+                 │  • Issues      │
+                 │    tokens      │
+                 │  • Groups      │
+                 │    claims      │
+                 └────────────────┘
 ```
+
+**Pure client-side authentication** - No backend server required!
 
 ## Tech Stack
 
-### Frontend (Port 5173)
 - **React 19** - UI library
 - **TanStack Router** - Type-safe routing
 - **react-oidc-context** - OIDC authentication provider
@@ -67,32 +63,24 @@ This POC demonstrates:
 - **Ant Design** - UI components
 - **Vite** - Build tool
 
-### Backend (Port 8081)
-- **Express** - Minimal API server
-- **CORS** - Cross-origin support
-
-Simple mock API server providing user and product data.
+**No backend server required!** Authentication happens entirely client-side between the browser and Okta.
 
 ## Project Structure
 
 ```
 ├── src/
 │   ├── components/
-│   │   ├── AppLayout.tsx         # Main layout with header, sidebar, logout
-│   │   ├── ProductsTable.tsx     # Products listing
-│   │   └── UsersTable.tsx        # Users listing
+│   │   └── AppLayout.tsx         # Main layout with header, sidebar, logout
 │   ├── lib/
-│   │   ├── api.ts                # API client functions
 │   │   ├── auth-client.ts        # (deprecated - kept for compatibility)
 │   │   ├── menu-config.tsx       # Sidebar menu configuration
-│   │   ├── oidc-config.ts        # OIDC configuration for Okta
-│   │   └── query-client.ts       # TanStack Query client
+│   │   └── oidc-config.ts        # OIDC configuration for Okta
 │   ├── routes/
 │   │   ├── __root.tsx            # Root route
 │   │   ├── _authenticated.tsx    # Protected route wrapper
 │   │   ├── _authenticated/
-│   │   │   ├── products.tsx      # Products page (protected)
-│   │   │   └── users.tsx         # Users page (protected)
+│   │   │   ├── products.tsx      # Profile page (protected)
+│   │   │   └── users.tsx         # Tokens page (protected)
 │   │   ├── callback.tsx          # OIDC callback handler
 │   │   ├── index.tsx             # Root redirect
 │   │   └── login.tsx             # Login page
@@ -100,8 +88,6 @@ Simple mock API server providing user and product data.
 │   │   └── auth.ts               # Auth-related types
 │   ├── main.tsx                  # App entry point with AuthProvider
 │   └── index.css                 # Global styles
-├── server/
-│   └── index.ts                  # Express API server
 ├── .env.local                    # Environment variables
 ├── OKTA_CONFIGURATION.md         # Detailed Okta setup guide
 ├── package.json
@@ -151,25 +137,16 @@ Key requirements:
 
 ### Running the Application
 
-Start both the API server and the Vite dev server:
+Start the Vite dev server:
 
 ```bash
 npm run dev
 ```
 
-This runs:
-- **API Server**: http://localhost:8081
+This starts:
 - **React App**: http://localhost:5173
 
-Or run them separately:
-
-```bash
-# Terminal 1 - API Server
-npm run dev:api
-
-# Terminal 2 - React App
-npm run dev:client
-```
+That's it! No backend server needed.
 
 ### Using the Application
 
@@ -177,9 +154,10 @@ npm run dev:client
 2. You'll be redirected to `/login`
 3. Click "Login with Okta"
 4. Authenticate with your Okta credentials
-5. After successful login, you'll be redirected to `/products`
-6. Your user info and groups will appear in the header
-7. Navigate between Products and Users using the sidebar
+5. After successful login, you'll see your profile page
+6. Explore:
+   - **Profile** - Your user information and groups
+   - **Tokens** - OIDC tokens and claims details
 
 ## Authentication Flow
 
@@ -274,25 +252,27 @@ Handles the OAuth callback:
 - `react-oidc-context` automatically processes it
 - Redirects to `/products` after completion
 
-## API Integration
+## What This POC Demonstrates
 
-The API server is simple and separate:
-- No authentication middleware needed
-- CORS enabled for http://localhost:5173
-- Provides mock data for users and products
+**Authentication & Authorization:**
+- ✅ User login with Okta
+- ✅ Protected routes (authentication required)
+- ✅ User profile information
+- ✅ Groups/roles from Okta
+- ✅ Token management (automatic renewal)
 
-In production, you would:
-- Add authentication middleware to verify access tokens
-- Check user groups/roles for authorization
-- Use real database instead of mock data
+**Token Details:**
+- ✅ ID Token with user claims
+- ✅ Access Token for API authorization
+- ✅ Refresh Token (if configured)
+- ✅ Token expiration and renewal
 
-Example secured endpoint (not implemented in this POC):
-
-```typescript
-app.get("/api/users", verifyAccessToken, (req, res) => {
-  // Verify token, check groups, return data
-});
-```
+**Use Cases:**
+- Learn how OIDC works
+- Test Okta integration
+- Understand token-based authentication
+- Prototype authentication flows
+- Inspect OIDC tokens and claims
 
 ## Accessing User Information
 
@@ -362,13 +342,34 @@ export const oidcConfig: AuthProviderProps = {
 
 Check browser console for detailed OIDC logs.
 
+## Adding an API Backend (Optional)
+
+This POC focuses purely on authentication. To add API calls:
+
+1. **Create your API** (Express, FastAPI, etc.)
+2. **Verify access tokens** - Check the `Authorization: Bearer <token>` header
+3. **Use Okta SDK** to verify tokens server-side
+4. **Check groups/claims** for authorization
+
+Example Express endpoint:
+
+```typescript
+app.get("/api/data", verifyAccessToken, (req, res) => {
+  // Token verified, user authenticated
+  const groups = req.user.groups;
+  // Check authorization, return data
+});
+```
+
+The access token is available in `auth.user.access_token` - send it with API requests.
+
 ## Comparison with Better Auth
 
 | Feature | Better Auth | react-oidc-context |
 |---------|-------------|-------------------|
 | **Architecture** | Backend + Frontend | Frontend only |
 | **Session Storage** | Server-side (cookies) | Client-side (sessionStorage) |
-| **Backend Required** | Yes (Express middleware) | No (API only) |
+| **Backend Required** | Yes (Express middleware) | No |
 | **Client Type** | Confidential | Public (PKCE) |
 | **Complexity** | Higher | Lower |
 | **Token Management** | Server-side | Client-side |

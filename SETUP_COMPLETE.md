@@ -52,15 +52,18 @@ npm run dev
 ```
 
 This starts:
-- **API Server**: http://localhost:8081
 - **React App**: http://localhost:5173
+
+That's it! No backend server needed.
 
 ### 4. Test It
 
 1. Open http://localhost:5173
 2. Click "Login with Okta"
 3. Authenticate
-4. You should see your name and groups in the header
+4. You should see:
+   - **Profile** page with your user info and groups
+   - **Tokens** page with OIDC token details
 
 ## Documentation
 
@@ -106,7 +109,7 @@ See **MIGRATION_SUMMARY.md** for detailed comparison.
 | Server-side sessions | Client-side tokens |
 | Port 8080 | Port 5173 |
 | Client secret required | PKCE (no secret) |
-| Complex server setup | Simple API server |
+| Complex server setup | **No server needed** |
 
 ## Ready to Code! 🚀
 
