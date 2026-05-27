@@ -1,4 +1,4 @@
-import { AuthProviderProps } from "react-oidc-context";
+import { AuthProviderProps } from "oidc-client-ts";
 
 const authority = import.meta.env.VITE_OKTA_ISSUER;
 const client_id = import.meta.env.VITE_OKTA_CLIENT_ID;
